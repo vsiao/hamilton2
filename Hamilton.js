@@ -18,14 +18,7 @@ function Hamilton(canvas) {
   };
   var type;
   for (type in this._listeners) {
-    function wrapListener() {
-      var listener = self._listeners[type];
-      return function(e) {
-        var coords = self._scaleInput(e.offsetX, e.offsetY);
-        listener.call(self, coords.x, coords.y, e);
-      };
-    }
-    this.canvas.addEventListener(type, wrapListener());
+    this.canvas.addEventListener(type, this._listeners[type]);
   }
 }
 
@@ -38,13 +31,6 @@ Hamilton.prototype.zoomOut = function() {
   if (this.zoomLevel > 0) {
     this._scaleTo(ZOOM_LEVELS[--this.zoomLevel]);
   }
-};
-
-Hamilton.prototype._scaleInput = function(canvasX, canvasY) {
-  return {
-    x: canvasX / this.scale,
-    y: canvasY / this.scale
-  };
 };
 
 Hamilton.prototype._scaleTo = function(endScale) {
@@ -113,8 +99,7 @@ Hamilton.prototype._drawGrid = function(ctx) {
   ctx.restore();
 };
 
-Hamilton.prototype._onMouseDown = function(x, y, e) {
-  console.log('mousedown');
+Hamilton.prototype._onMouseDown = function(e) {
   this._mouseDownX = e.pageX;
   this._mouseDownY = e.pageY;
   this._objX = this.x0;
@@ -122,13 +107,12 @@ Hamilton.prototype._onMouseDown = function(x, y, e) {
   e.preventDefault();
 };
 
-Hamilton.prototype._onMouseUp = function(x, y, e) {
+Hamilton.prototype._onMouseUp = function(e) {
   this._mouseDownX = this._mouseDownY = null;
   this.canvas.style.cursor = 'auto';
 };
 
-Hamilton.prototype._onMouseMove = function(x, y, e) {
-  console.log('mousemove');
+Hamilton.prototype._onMouseMove = function(e) {
   if (this._mouseDownX && this._mouseDownY) {
     // FIXME(vsiao) cross-browserize
     this.canvas.style.cursor = '-webkit-grabbing';
