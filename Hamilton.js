@@ -4,8 +4,8 @@ function Hamilton(canvas) {
   this.canvas = canvas;
   this.zoomLevel = 3;
   this.scale = ZOOM_LEVELS[this.zoomLevel];
-  this.centerX = 100;
-  this.centerY = 100;
+  this.x0 = 0;
+  this.y0 = 0;
   this.options = {
     showGrid: true,
     gridSpacing: 50
@@ -41,11 +41,9 @@ Hamilton.prototype.zoomOut = function() {
 };
 
 Hamilton.prototype._scaleInput = function(canvasX, canvasY) {
-  var centerOffsetX = (canvasX - this.canvas.width / 2) / this.scale;
-  var centerOffsetY = (canvasY - this.canvas.height / 2) / this.scale;
   return {
-    x: this.centerX + centerOffsetX,
-    y: this.centerY + centerOffsetY
+    x: canvasX / this.scale,
+    y: canvasY / this.scale
   };
 };
 
@@ -57,7 +55,11 @@ Hamilton.prototype._scaleTo = function(endScale) {
   var diff = endScale - this.scale;
   var self = this;
   function animate() {
-    self.scale = self.scale + diff/10;
+    var rescale = self.scale + diff / 10;
+    var centerOffset = (1 / self.scale) - (1 / rescale);
+    self.x0 += centerOffset * self.canvas.width / 2;
+    self.y0 += centerOffset * self.canvas.height / 2;
+    self.scale = rescale;
     self.draw();
     if ((diff > 0 && self.scale < endScale) ||
         (diff < 0 && self.scale > endScale)) {
@@ -75,9 +77,8 @@ Hamilton.prototype.draw = function() {
   var ctx = this.canvas.getContext('2d');
   ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   ctx.save();
-  ctx.translate(this.canvas.width/2, this.canvas.height/2);
   ctx.scale(this.scale, this.scale);
-  ctx.translate(-this.centerX, -this.centerY);
+  ctx.translate(-this.x0, -this.y0);
   this._drawGrid(ctx);
   ctx.restore();
 };
@@ -90,24 +91,22 @@ Hamilton.prototype._snapToGrid = function(coord) {
 Hamilton.prototype._drawGrid = function(ctx) {
   var scaleW = this.canvas.width / this.scale;
   var scaleH = this.canvas.height / this.scale;
-  var x0 = this.centerX - scaleW / 2;
-  var y0 = this.centerY - scaleH / 2;
   var sp = this.options.gridSpacing;
 
   ctx.save();
   ctx.strokeStyle = '#ddd';
   ctx.lineWidth = 1 / this.scale;
-  for (i = this._snapToGrid(x0); i < this.centerX + scaleW / 2; i += sp) {
+  for (i = this._snapToGrid(this.x0)-0.5; i < this.x0 + scaleW; i += sp) {
     ctx.beginPath();
-    ctx.moveTo(i, y0)
-    ctx.lineTo(i, y0 + scaleH);
+    ctx.moveTo(i, this.y0)
+    ctx.lineTo(i, this.y0 + scaleH);
     ctx.closePath();
     ctx.stroke();
   }
-  for (i = this._snapToGrid(y0); i < this.centerY + scaleH / 2; i += sp) {
+  for (i = this._snapToGrid(this.y0)-0.5; i < this.y0 + scaleH; i += sp) {
     ctx.beginPath();
-    ctx.moveTo(x0, i);
-    ctx.lineTo(x0 + scaleW, i);
+    ctx.moveTo(this.x0, i);
+    ctx.lineTo(this.x0 + scaleW, i);
     ctx.closePath();
     ctx.stroke();
   }
@@ -118,8 +117,8 @@ Hamilton.prototype._onMouseDown = function(x, y, e) {
   console.log('mousedown');
   this._mouseDownX = e.pageX;
   this._mouseDownY = e.pageY;
-  this._objX = this.centerX;
-  this._objY = this.centerY;
+  this._objX = this.x0;
+  this._objY = this.y0;
   e.preventDefault();
 };
 
@@ -133,8 +132,8 @@ Hamilton.prototype._onMouseMove = function(x, y, e) {
   if (this._mouseDownX && this._mouseDownY) {
     // FIXME(vsiao) cross-browserize
     this.canvas.style.cursor = '-webkit-grabbing';
-    this.centerX = this._objX - (e.pageX - this._mouseDownX) / this.scale;
-    this.centerY = this._objY - (e.pageY - this._mouseDownY) / this.scale;
+    this.x0 = this._objX - (e.pageX - this._mouseDownX) / this.scale;
+    this.y0 = this._objY - (e.pageY - this._mouseDownY) / this.scale;
     this.draw();
   }
 };
