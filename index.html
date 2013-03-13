@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hamilton 2</title>
+  <link rel="stylesheet" type="text/css" href="reset.css">
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <div id="header" class="clearfix">
+    <h1>Hamilton<sup>2</sup></h1>
+    <ul id="toolbar">
+    </ul>
+    <ul id="options">
+      <li><a href="#" class="zoom-in">+</a></li>
+      <li><a href="#" class="zoom-out">&ndash;</a></li>
+    </ul>
+  </div>
+  <canvas id="app-canvas">
+    You need HTML5 Canvas to run Hamilton.
+  </canvas>
+  <script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
+  <script type="text/javascript" src="Hamilton.js"></script>
+  <script type="text/javascript">
+  var canvas = document.getElementById('app-canvas');
+  var HamiltonApp = new Hamilton(canvas);
+  var $c = $(canvas);
+  var $h = $('#header');
+  var $w = $(window);
+
+  function resizeCanvas() {
+    canvas.width = $w.width();
+    canvas.height = $w.height() - $h.outerHeight();
+    HamiltonApp.draw();
+  }
+  resizeCanvas();
+  // TODO(vsiao) throttle?
+  $w.resize(resizeCanvas);
+
+  $('#options').click(function(e) {
+    var link = $(e.target).closest('a');
+    if (link.hasClass('zoom-in')) {
+      HamiltonApp.zoomIn();
+    } else if (link.hasClass('zoom-out')) {
+      HamiltonApp.zoomOut();
+    }
+  });
+  </script>
+</body>
