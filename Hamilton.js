@@ -152,18 +152,28 @@ Hamilton.prototype._getCanvasPosition = function() {
 
 Hamilton.prototype._onDocumentMouseMove = function(e) {
   if (this._mouseDownX && this._mouseDownY) {
-    // FIXME(vsiao) cross-browserize
-    this.canvas.style.cursor = '-webkit-grabbing';
-
+    // dragging an object
     var scaleDiffX = (e.pageX - this._mouseDownX) / this.scale;
     var scaleDiffY = (e.pageY - this._mouseDownY) / this.scale;
+
+    // FIXME(vsiao) cross-browserize cursor change
+    this.canvas.style.cursor = '-webkit-grabbing';
+
+    // modify object position
     this.x0 = this._objX - scaleDiffX;
     this.y0 = this._objY - scaleDiffY;
   } else {
-    // only set if not dragging canvas
+    // update mouse position
     var canvasPos = this._getCanvasPosition();
     this._mouseX = this.x0 + ((e.pageX - canvasPos.x) / this.scale);
     this._mouseY = this.y0 + ((e.pageY - canvasPos.y) / this.scale);
+
+    // detect hover events
+    if (this.graph.setFocus(this._mouseX, this._mouseY)) {
+      this.canvas.style.cursor = 'pointer';
+    } else {
+      this.canvas.style.cursor = 'auto';
+    }
   }
   this.draw();
 };

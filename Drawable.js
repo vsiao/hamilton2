@@ -21,22 +21,48 @@ Drawable.prototype.drawPath = function(ctx) {
 };
 
 Drawable.prototype.draw = function(ctx) {
+  var drawStyle = this._onceStyle || this.style;
+  var drawOptions = this._onceOptions || this.options;
+  this._onceStyle = this._onceOptions = null;
+
   ctx.beginPath();
   this.drawPath(ctx);
   ctx.closePath();
   
-  if (this.options.fill) {
-    ctx.fillStyle = this.style.fillStyle;
+  if (drawOptions.fill) {
+    ctx.fillStyle = drawStyle.fillStyle;
     ctx.fill();
   }
-  if (this.options.text) {
-    ctx.font = '' + this.style.fontSize + 'px' + this.style.fontFamily;
+  if (drawOptions.text) {
+    ctx.font = '' + drawStyle.fontSize + 'px' + this.style.fontFamily;
     ctx.fillText(this.label, this.x, this.y);
   }
-  if (this.options.stroke) {
-    ctx.lineWidth = this.style.lineWidth;
-    ctx.strokeStyle = this.style.strokeStyle;
+  if (drawOptions.stroke) {
+    ctx.lineWidth = drawStyle.lineWidth;
+    ctx.strokeStyle = drawStyle.strokeStyle;
     ctx.stroke();
+  }
+};
+
+/**
+ * Set drawing style and options which persist for only _one_ call to draw().
+ */
+Drawable.prototype.once = function(style, options) {
+  this._onceStyle = {}, this._onceOptions = {};
+  var prop;
+  for (prop in this.style) {
+    this._onceStyle[prop] = this.style[prop];
+  }
+  style = style || {};
+  for (prop in style) {
+    this._onceStyle[prop] = style[prop];
+  }
+  for (prop in this.options) {
+    this._onceOptions[prop] = this.options[prop];
+  }
+  options = options || {};
+  for (prop in options) {
+    this._onceOptions[prop] = options[prop];
   }
 };
 
