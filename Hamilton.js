@@ -3,18 +3,16 @@ var ZOOM_LEVELS = [0.35, 0.5, 0.7, 1.0, 1.5, 2.5, 5.0];
 function Hamilton(canvas) {
   this.canvas = canvas;
   this.graph = new Graph();
-  this.graph.addVertex('a', 100, 100);
-  this.graph.addVertex('b', 250, 150);
-  this.graph.addEdge('a', 'b');
+  this.x = 0;
+  this.y = 0;
+
   this.zoomLevel = 3;
   this.scale = ZOOM_LEVELS[this.zoomLevel];
-  this.x0 = 0;
-  this.y0 = 0;
   this.options = {
     showGrid: true,
     gridSpacing: 50
   };
-  var self = this;
+
   document.addEventListener('mousemove', this._onDocumentMouseMove.bind(this));
   document.addEventListener('mouseup', this._onDocumentMouseUp.bind(this));
   this.canvas.addEventListener('mousedown', this._onMouseDown.bind(this));
@@ -44,16 +42,16 @@ Hamilton.prototype._scaleTo = function(endScale) {
   function animate() {
     var rescale = self.scale + diff / 10;
     var centerOffset = (1 / self.scale) - (1 / rescale);
-    self.x0 += centerOffset * self.canvas.width / 2;
-    self.y0 += centerOffset * self.canvas.height / 2;
+    self.x -= centerOffset * self.canvas.width / 2;
+    self.y -= centerOffset * self.canvas.height / 2;
     self.scale = rescale;
     self.draw();
     if ((diff > 0 && self.scale < endScale) ||
         (diff < 0 && self.scale > endScale)) {
       setTimeout(animate, 30);
     } else {
-      self.x0 = Math.floor(self.x0);
-      self.y0 = Math.floor(self.y0);
+      self.x = Math.floor(self.x);
+      self.y = Math.floor(self.y);
       self.scale = endScale;
       self.draw();
       self._animating = false;
@@ -67,7 +65,7 @@ Hamilton.prototype.draw = function() {
   ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   ctx.save();
   ctx.scale(this.scale, this.scale);
-  ctx.translate(-this.x0, -this.y0);
+  ctx.translate(this.x, this.y);
   this._drawGrid(ctx);
 
   this.graph.drawEdges(ctx);
@@ -92,17 +90,17 @@ Hamilton.prototype._drawGrid = function(ctx) {
   ctx.save();
   ctx.strokeStyle = '#ddd';
   ctx.lineWidth = 1 / this.scale;
-  for (i = this._snapToGrid(this.x0)+0.5; i < this.x0 + scaleW; i += sp) {
+  for (i = this._snapToGrid(-this.x)+0.5; i < -this.x + scaleW; i += sp) {
     ctx.beginPath();
-    ctx.moveTo(i, this.y0)
-    ctx.lineTo(i, this.y0 + scaleH);
+    ctx.moveTo(i, -this.y)
+    ctx.lineTo(i, -this.y + scaleH);
     ctx.closePath();
     ctx.stroke();
   }
-  for (i = this._snapToGrid(this.y0)+0.5; i < this.y0 + scaleH; i += sp) {
+  for (i = this._snapToGrid(-this.y)+0.5; i < -this.y + scaleH; i += sp) {
     ctx.beginPath();
-    ctx.moveTo(this.x0, i);
-    ctx.lineTo(this.x0 + scaleW, i);
+    ctx.moveTo(-this.x, i);
+    ctx.lineTo(-this.x + scaleW, i);
     ctx.closePath();
     ctx.stroke();
   }
@@ -123,8 +121,8 @@ Hamilton.prototype._drawMousePos = function(ctx) {
 Hamilton.prototype._onMouseDown = function(e) {
   this._mouseDownX = e.pageX;
   this._mouseDownY = e.pageY;
-  this._objX = this.x0;
-  this._objY = this.y0;
+  this._dragX0 = this._focusElement.x;
+  this._dragY0 = this._focusElement.y;
   e.preventDefault();
 };
 
@@ -160,18 +158,24 @@ Hamilton.prototype._onDocumentMouseMove = function(e) {
     this.canvas.style.cursor = '-webkit-grabbing';
 
     // modify object position
-    this.x0 = this._objX - scaleDiffX;
-    this.y0 = this._objY - scaleDiffY;
+    this._focusElement.x = this._dragX0 + scaleDiffX;
+    this._focusElement.y = this._dragY0 + scaleDiffY;
+    if (this._focusElement !== this) {
+      this._focusElement.x = this._snapToGrid(this._focusElement.x);
+      this._focusElement.y = this._snapToGrid(this._focusElement.y);
+    }
   } else {
     // update mouse position
     var canvasPos = this._getCanvasPosition();
-    this._mouseX = this.x0 + ((e.pageX - canvasPos.x) / this.scale);
-    this._mouseY = this.y0 + ((e.pageY - canvasPos.y) / this.scale);
+    this._mouseX = -this.x + ((e.pageX - canvasPos.x) / this.scale);
+    this._mouseY = -this.y + ((e.pageY - canvasPos.y) / this.scale);
 
     // detect hover events
     if (this.graph.setFocus(this._mouseX, this._mouseY)) {
+      this._focusElement = this.graph.focusElement;
       this.canvas.style.cursor = 'pointer';
     } else {
+      this._focusElement = this;
       this.canvas.style.cursor = 'auto';
     }
   }

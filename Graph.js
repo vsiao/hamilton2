@@ -28,12 +28,12 @@ function dist(x1, y1, x2, y2) {
 }
 
 Graph.prototype.setFocus = function(mouseX, mouseY) {
-  this._focusElement = null;
+  this.focusElement = null;
   var vtx;
   for (i = 0; i < this.vertices.length; ++i) {
     vtx = this.vertices[i];
     if (dist(mouseX, mouseY, vtx.x, vtx.y) < vtx.r) {
-      this._focusElement = vtx;
+      this.focusElement = vtx;
       return true;
     }
   }
@@ -41,8 +41,14 @@ Graph.prototype.setFocus = function(mouseX, mouseY) {
 };
 
 Graph.prototype.drawEdges = function(ctx) {
+  var edge;
   for (i = 0; i < this.edges.length; ++i) {
-    this.edges[i].draw(ctx);
+    edge = this.edges[i];
+    if (edge.v1 === this.focusElement ||
+        edge.v2 === this.focusElement) {
+      edge.once({strokeStyle: HAMILTON_COLORS.TEAL});
+    }
+    edge.draw(ctx);
   }
 };
 
@@ -50,7 +56,7 @@ Graph.prototype.drawVertices = function(ctx) {
   var vtx;
   for (i = 0; i < this.vertices.length; ++i) {
     vtx = this.vertices[i];
-    if (this._focusElement === vtx) {
+    if (this.focusElement === vtx) {
       vtx.once({strokeStyle: HAMILTON_COLORS.RED});
     }
     vtx.draw(ctx);
@@ -60,7 +66,7 @@ Graph.prototype.drawVertices = function(ctx) {
 var Vertex = Drawable.extend({
   initialize: function(id, x, y) {
     this.id = id;
-    this.r = 18;
+    this.r = 20;
     this.x = x;
     this.y = y;
   },
@@ -69,7 +75,7 @@ var Vertex = Drawable.extend({
     fill: true
   },
   drawStyle: {
-    lineWidth: 4,
+    lineWidth: 5,
     strokeStyle: '#333',
     fillStyle: '#fff'
   },
@@ -91,7 +97,7 @@ var Edge = Drawable.extend({
     stroke: true
   },
   drawStyle: {
-    lineWidth: 3,
+    lineWidth: 4,
     strokeStyle: '#333'
   },
   drawPath: function(ctx) {

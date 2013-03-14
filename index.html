@@ -57,4 +57,22 @@
     }
   });
   </script>
+  <script type="text/javascript">
+  var graph = HamiltonApp.graph;
+  var vpos = [[5,1],[5,3],[1,4],[10,4],[3,5],[8,5],[4,8],[7,8],[3,10],[8,10]];
+  var i;
+  function scale(coord) {
+    return 50 + 50*coord;
+  }
+  for (i = 0; i < vpos.length; ++i) {
+    graph.addVertex(''+i, scale(vpos[i][0]), scale(vpos[i][1]));
+  }
+  var edges = [[0,1],[0,2],[0,3],[1,6],[1,7],[2,4],[2,8],[3,5],[3,9],
+               [4,5],[4,7],[5,6],[6,8],[7,9],[8,9]];
+  for (i = 0; i < edges.length; ++i) {
+    graph.addEdge(''+edges[i][0], ''+edges[i][1]);
+  }
+
+  HamiltonApp.draw();
+  </script>
 </body>
