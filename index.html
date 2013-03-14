@@ -19,6 +19,13 @@
     You need HTML5 Canvas to run Hamilton.
   </canvas>
   <script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.js"></script>
+  <script type="text/javascript">
+  if (!Function.prototype.bind) {
+    throw new Error("Function.prototype.bind not defined");
+  }
+  </script>
+  <script type="text/javascript" src="Drawable.js"></script>
+  <script type="text/javascript" src="Graph.js"></script>
   <script type="text/javascript" src="Hamilton.js"></script>
   <script type="text/javascript">
   var canvas = document.getElementById('app-canvas');

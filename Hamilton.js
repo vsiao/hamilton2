@@ -2,6 +2,10 @@ var ZOOM_LEVELS = [0.35, 0.5, 0.7, 1.0, 1.5, 2.5, 5.0];
 
 function Hamilton(canvas) {
   this.canvas = canvas;
+  this.graph = new Graph();
+  this.graph.addVertex('a', 100, 100);
+  this.graph.addVertex('b', 250, 150);
+  this.graph.addEdge('a', 'b');
   this.zoomLevel = 3;
   this.scale = ZOOM_LEVELS[this.zoomLevel];
   this.x0 = 0;
@@ -11,32 +15,29 @@ function Hamilton(canvas) {
     gridSpacing: 50
   };
   var self = this;
-  this._listeners = {
-    mousemove: function() { self._onMouseMove.apply(self, arguments); },
-    mousedown: function() { self._onMouseDown.apply(self, arguments); },
-    mouseup: function() { self._onMouseUp.apply(self, arguments); }
-  };
-  var type;
-  for (type in this._listeners) {
-    this.canvas.addEventListener(type, this._listeners[type]);
-  }
+  document.addEventListener('mousemove', this._onDocumentMouseMove.bind(this));
+  document.addEventListener('mouseup', this._onDocumentMouseUp.bind(this));
+  this.canvas.addEventListener('mousedown', this._onMouseDown.bind(this));
 }
 
 Hamilton.prototype.zoomIn = function() {
+  if (this._animating) {
+    return;
+  }
   if (this.zoomLevel < ZOOM_LEVELS.length - 1) {
     this._scaleTo(ZOOM_LEVELS[++this.zoomLevel]);
   }
 };
 Hamilton.prototype.zoomOut = function() {
+  if (this._animating) {
+    return;
+  }
   if (this.zoomLevel > 0) {
     this._scaleTo(ZOOM_LEVELS[--this.zoomLevel]);
   }
 };
 
 Hamilton.prototype._scaleTo = function(endScale) {
-  if (this._animating) {
-    return;
-  }
   this._animating = true;
   var diff = endScale - this.scale;
   var self = this;
@@ -51,6 +52,8 @@ Hamilton.prototype._scaleTo = function(endScale) {
         (diff < 0 && self.scale > endScale)) {
       setTimeout(animate, 30);
     } else {
+      self.x0 = Math.floor(self.x0);
+      self.y0 = Math.floor(self.y0);
       self.scale = endScale;
       self.draw();
       self._animating = false;
@@ -66,6 +69,13 @@ Hamilton.prototype.draw = function() {
   ctx.scale(this.scale, this.scale);
   ctx.translate(-this.x0, -this.y0);
   this._drawGrid(ctx);
+
+  this.graph.drawEdges(ctx);
+  // draw dummy edge
+
+  this.graph.drawVertices(ctx);
+  // draw dummy vertex
+
   ctx.restore();
 };
 
@@ -82,14 +92,14 @@ Hamilton.prototype._drawGrid = function(ctx) {
   ctx.save();
   ctx.strokeStyle = '#ddd';
   ctx.lineWidth = 1 / this.scale;
-  for (i = this._snapToGrid(this.x0)-0.5; i < this.x0 + scaleW; i += sp) {
+  for (i = this._snapToGrid(this.x0)+0.5; i < this.x0 + scaleW; i += sp) {
     ctx.beginPath();
     ctx.moveTo(i, this.y0)
     ctx.lineTo(i, this.y0 + scaleH);
     ctx.closePath();
     ctx.stroke();
   }
-  for (i = this._snapToGrid(this.y0)-0.5; i < this.y0 + scaleH; i += sp) {
+  for (i = this._snapToGrid(this.y0)+0.5; i < this.y0 + scaleH; i += sp) {
     ctx.beginPath();
     ctx.moveTo(this.x0, i);
     ctx.lineTo(this.x0 + scaleW, i);
@@ -97,6 +107,17 @@ Hamilton.prototype._drawGrid = function(ctx) {
     ctx.stroke();
   }
   ctx.restore();
+};
+
+Hamilton.prototype._drawMousePos = function(ctx) {
+  var xPosStr = '--';
+  var yPosStr = '--';
+  if (this._mouseX && this._mouseY) {
+    xPosStr = '' + Math.floor(this._mouseX);
+    yPosStr = '' + Math.floor(this._mouseY);
+  }
+  ctx.font = '18px Helvetica';
+  ctx.fillText(xPosStr + ', ' + yPosStr, 10, this.canvas.height - 10);
 };
 
 Hamilton.prototype._onMouseDown = function(e) {
@@ -107,17 +128,42 @@ Hamilton.prototype._onMouseDown = function(e) {
   e.preventDefault();
 };
 
-Hamilton.prototype._onMouseUp = function(e) {
+Hamilton.prototype._onDocumentMouseUp = function(e) {
   this._mouseDownX = this._mouseDownY = null;
   this.canvas.style.cursor = 'auto';
+
+  // need to check canvas bounding box for further action
 };
 
-Hamilton.prototype._onMouseMove = function(e) {
+Hamilton.prototype._getCanvasPosition = function() {
+  var accLeft = 0, accTop = 0;
+  var node = this.canvas;
+  if (node.offsetParent) {
+    do {
+      accLeft += node.offsetLeft;
+      accTop += node.offsetTop;
+    } while (node = node.offsetParent);
+    return {
+      x: accLeft,
+      y: accTop
+    };
+  }
+};
+
+Hamilton.prototype._onDocumentMouseMove = function(e) {
   if (this._mouseDownX && this._mouseDownY) {
     // FIXME(vsiao) cross-browserize
     this.canvas.style.cursor = '-webkit-grabbing';
-    this.x0 = this._objX - (e.pageX - this._mouseDownX) / this.scale;
-    this.y0 = this._objY - (e.pageY - this._mouseDownY) / this.scale;
-    this.draw();
+
+    var scaleDiffX = (e.pageX - this._mouseDownX) / this.scale;
+    var scaleDiffY = (e.pageY - this._mouseDownY) / this.scale;
+    this.x0 = this._objX - scaleDiffX;
+    this.y0 = this._objY - scaleDiffY;
+  } else {
+    // only set if not dragging canvas
+    var canvasPos = this._getCanvasPosition();
+    this._mouseX = this.x0 + ((e.pageX - canvasPos.x) / this.scale);
+    this._mouseY = this.y0 + ((e.pageY - canvasPos.y) / this.scale);
   }
+  this.draw();
 };
